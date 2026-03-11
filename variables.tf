@@ -24,6 +24,16 @@ variable "log_groups" {
   default = []
 }
 
+variable "log_group_policies" {
+  description = "List of log group policies, each with log_group_name, policy_name, and policy_document."
+  type = list(object({
+    log_group_name  = string
+    policy_name     = string
+    policy_document = string
+  }))
+  default = []
+}
+
 variable "enable_dashboard" {
   description = "Whether to create CloudWatch dashboard"
   type        = bool

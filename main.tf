@@ -11,6 +11,13 @@ resource "aws_cloudwatch_log_group" "application_logs" {
   }
 }
 
+# CloudWatch Log Resource Policies (per log group)
+resource "aws_cloudwatch_log_resource_policy" "custom_policy" {
+  count         = length(var.log_group_policies)
+  policy_name   = var.log_group_policies[count.index].policy_name
+  policy_document = var.log_group_policies[count.index].policy_document
+}
+
 # CloudWatch Dashboard
 resource "aws_cloudwatch_dashboard" "main" {
   count          = var.enable_dashboard ? 1 : 0
