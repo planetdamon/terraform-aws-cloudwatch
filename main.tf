@@ -1,11 +1,11 @@
 # CloudWatch Log Groups
 resource "aws_cloudwatch_log_group" "application_logs" {
-  count             = length(var.log_groups)
-  name              = var.log_groups[count.index].name
-  retention_in_days = var.log_groups[count.index].retention_days
+  for_each = var.log_groups
+  name              = each.key
+  retention_in_days = each.value.retention_days
 
   tags = {
-    Name        = var.log_groups[count.index].name
+    Name        = each.key
     Environment = var.environment
     Application = var.project_name
   }

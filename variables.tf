@@ -16,12 +16,11 @@ variable "aws_region" {
 }
 
 variable "log_groups" {
-  description = "List of CloudWatch log groups to create"
-  type = list(object({
-    name           = string
+  description = "Map of CloudWatch log groups to create, keyed by log group name."
+  type = map(object({
     retention_days = number
   }))
-  default = []
+  default = {}
 }
 
 variable "log_group_policies" {
