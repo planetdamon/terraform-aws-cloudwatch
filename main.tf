@@ -49,7 +49,7 @@ resource "aws_cloudwatch_dashboard" "main" {
 resource "aws_cloudwatch_metric_alarm" "application_alarms" {
   count = length(var.metric_alarms)
 
-  alarm_name          = "${var.project_name}-${var.metric_alarms[count.index].name}"
+  alarm_name          = "${var.project_name}-${var.environment}-${var.metric_alarms[count.index].name}"
   comparison_operator = var.metric_alarms[count.index].comparison_operator
   evaluation_periods  = var.metric_alarms[count.index].evaluation_periods
   metric_name         = var.metric_alarms[count.index].metric_name
