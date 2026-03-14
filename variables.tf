@@ -1,6 +1,43 @@
-variable "project_name" {
-  description = "Name of the project"
+variable "aws_region" {
+  description = "AWS region"
   type        = string
+  default     = "us-east-1"
+}
+
+variable "composite_alarm_rule" {
+  description = "Rule for composite alarm"
+  type        = string
+  default     = ""
+}
+
+variable "create_sns_topic" {
+  description = "Whether to create SNS topic for CloudWatch notifications"
+  type        = bool
+  default     = false
+}
+
+variable "dashboard_metrics" {
+  description = "List of metrics for CloudWatch dashboard"
+  type        = list(list(string))
+  default     = []
+}
+
+variable "enable_composite_alarm" {
+  description = "Whether to create composite alarm"
+  type        = bool
+  default     = false
+}
+
+variable "enable_dashboard" {
+  description = "Whether to create CloudWatch dashboard"
+  type        = bool
+  default     = false
+}
+
+variable "enable_synthetics_canary" {
+  description = "Whether to enable CloudWatch Synthetics canary"
+  type        = bool
+  default     = false
 }
 
 variable "environment" {
@@ -9,18 +46,30 @@ variable "environment" {
   default     = "dev"
 }
 
-variable "aws_region" {
-  description = "AWS region"
-  type        = string
-  default     = "us-east-1"
+variable "event_rules" {
+  description = "List of CloudWatch event rules to create"
+  type = list(object({
+    name                = string
+    description         = string
+    event_pattern       = string
+    schedule_expression = string
+    target_arn          = string
+    input_transformer = object({
+      input_paths    = map(string)
+      input_template = string
+    })
+  }))
+  default = []
 }
 
-variable "log_groups" {
-  description = "Map of CloudWatch log groups to create, keyed by log group name."
-  type = map(object({
-    retention_days = number
+variable "insights_queries" {
+  description = "List of CloudWatch Insights queries"
+  type = list(object({
+    name            = string
+    log_group_names = list(string)
+    query_string    = string
   }))
-  default = {}
+  default = []
 }
 
 variable "log_group_policies" {
@@ -33,16 +82,25 @@ variable "log_group_policies" {
   default = []
 }
 
-variable "enable_dashboard" {
-  description = "Whether to create CloudWatch dashboard"
-  type        = bool
-  default     = false
+variable "log_groups" {
+  description = "Map of CloudWatch log groups to create, keyed by log group name."
+  type = map(object({
+    retention_days = number
+  }))
+  default = {}
 }
 
-variable "dashboard_metrics" {
-  description = "List of metrics for CloudWatch dashboard"
-  type        = list(list(string))
-  default     = []
+variable "log_metric_filters" {
+  description = "List of CloudWatch log metric filters"
+  type = list(object({
+    name             = string
+    log_group_name   = string
+    pattern          = string
+    metric_name      = string
+    metric_namespace = string
+    metric_value     = string
+  }))
+  default = []
 }
 
 variable "metric_alarms" {
@@ -62,16 +120,15 @@ variable "metric_alarms" {
   default = []
 }
 
-variable "enable_composite_alarm" {
-  description = "Whether to create composite alarm"
-  type        = bool
-  default     = false
+variable "notification_emails" {
+  description = "List of email addresses for CloudWatch notifications"
+  type        = list(string)
+  default     = []
 }
 
-variable "composite_alarm_rule" {
-  description = "Rule for composite alarm"
+variable "project_name" {
+  description = "Name of the project"
   type        = string
-  default     = ""
 }
 
 variable "sns_topic_arn" {
@@ -80,71 +137,8 @@ variable "sns_topic_arn" {
   default     = ""
 }
 
-variable "event_rules" {
-  description = "List of CloudWatch event rules to create"
-  type = list(object({
-    name                = string
-    description         = string
-    event_pattern       = string
-    schedule_expression = string
-    target_arn          = string
-    input_transformer = object({
-      input_paths    = map(string)
-      input_template = string
-    })
-  }))
-  default = []
-}
-
-variable "log_metric_filters" {
-  description = "List of CloudWatch log metric filters"
-  type = list(object({
-    name             = string
-    log_group_name   = string
-    pattern          = string
-    metric_name      = string
-    metric_namespace = string
-    metric_value     = string
-  }))
-  default = []
-}
-
-variable "insights_queries" {
-  description = "List of CloudWatch Insights queries"
-  type = list(object({
-    name            = string
-    log_group_names = list(string)
-    query_string    = string
-  }))
-  default = []
-}
-
-variable "create_sns_topic" {
-  description = "Whether to create SNS topic for CloudWatch notifications"
-  type        = bool
-  default     = false
-}
-
-variable "notification_emails" {
-  description = "List of email addresses for CloudWatch notifications"
-  type        = list(string)
-  default     = []
-}
-
-variable "enable_synthetics_canary" {
-  description = "Whether to enable CloudWatch Synthetics canary"
-  type        = bool
-  default     = false
-}
-
 variable "synthetics_bucket_name" {
   description = "S3 bucket name for Synthetics artifacts"
-  type        = string
-  default     = ""
-}
-
-variable "website_url" {
-  description = "Website URL to monitor with Synthetics"
   type        = string
   default     = ""
 }
@@ -156,4 +150,10 @@ variable "synthetics_schedule" {
     duration_in_seconds = number
   })
   default = null
+}
+
+variable "website_url" {
+  description = "Website URL to monitor with Synthetics"
+  type        = string
+  default     = ""
 }
