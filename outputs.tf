@@ -25,7 +25,7 @@ output "alarm_arns" {
 
 output "sns_topic_arn" {
   description = "Effective SNS topic ARN for CloudWatch notifications"
-  value       = local.effective_sns_topic_arn
+  value       = var.sns_topic_arn
 }
 
 output "event_rule_names" {

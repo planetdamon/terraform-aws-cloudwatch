@@ -18,9 +18,6 @@ resource "aws_cloudwatch_log_resource_policy" "custom_policy" {
   policy_document = var.log_group_policies[count.index].policy_document
 }
 
-locals {
-  effective_sns_topic_arn = trimspace(var.sns_topic_arn) != "" ? trimspace(var.sns_topic_arn) : (var.create_sns_topic ? try(aws_sns_topic.cloudwatch_notifications[0].arn, "") : "")
-}
 
 # CloudWatch Dashboard
 resource "aws_cloudwatch_dashboard" "main" {
@@ -62,7 +59,7 @@ resource "aws_cloudwatch_metric_alarm" "application_alarms" {
   statistic           = var.metric_alarms[count.index].statistic
   threshold           = var.metric_alarms[count.index].threshold
   alarm_description   = var.metric_alarms[count.index].description
-  alarm_actions       = local.effective_sns_topic_arn != "" ? [local.effective_sns_topic_arn] : []
+  alarm_actions       = var.sns_topic_arn != "" ? [var.sns_topic_arn] : []
   actions_enabled     = true
   dimensions          = var.metric_alarms[count.index].dimensions
 
@@ -79,8 +76,8 @@ resource "aws_cloudwatch_composite_alarm" "main" {
   alarm_name        = "${var.project_name}-composite-alarm"
   alarm_description = "Composite alarm for ${var.project_name}"
   alarm_rule        = var.composite_alarm_rule
-  alarm_actions     = local.effective_sns_topic_arn != "" ? [local.effective_sns_topic_arn] : []
-  ok_actions        = local.effective_sns_topic_arn != "" ? [local.effective_sns_topic_arn] : []
+  alarm_actions     = var.sns_topic_arn != "" ? [var.sns_topic_arn] : []
+  ok_actions        = var.sns_topic_arn != "" ? [var.sns_topic_arn] : []
 
   tags = {
     Name        = "${var.project_name}-composite-alarm"
