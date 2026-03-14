@@ -24,8 +24,8 @@ output "alarm_arns" {
 }
 
 output "sns_topic_arn" {
-  description = "ARN of the SNS topic for CloudWatch notifications"
-  value       = var.create_sns_topic ? aws_sns_topic.cloudwatch_notifications[0].arn : ""
+  description = "Effective SNS topic ARN for CloudWatch notifications"
+  value       = local.effective_sns_topic_arn
 }
 
 output "event_rule_names" {
