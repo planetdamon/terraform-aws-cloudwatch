@@ -1,3 +1,7 @@
+locals {
+  sns_topic_arns = [for t in var.sns_topic_arns : t.arn]
+}
+
 # CloudWatch Log Groups
 resource "aws_cloudwatch_log_group" "application_logs" {
   for_each          = var.log_groups
@@ -59,7 +63,7 @@ resource "aws_cloudwatch_metric_alarm" "application_alarms" {
   statistic           = var.metric_alarms[count.index].statistic
   threshold           = var.metric_alarms[count.index].threshold
   alarm_description   = var.metric_alarms[count.index].description
-  alarm_actions       = var.sns_topic_arn != "" ? [var.sns_topic_arn] : []
+  alarm_actions       = local.sns_topic_arns
   actions_enabled     = true
   dimensions          = var.metric_alarms[count.index].dimensions
 
@@ -76,8 +80,8 @@ resource "aws_cloudwatch_composite_alarm" "main" {
   alarm_name        = "${var.project_name}-composite-alarm"
   alarm_description = "Composite alarm for ${var.project_name}"
   alarm_rule        = var.composite_alarm_rule
-  alarm_actions     = var.sns_topic_arn != "" ? [var.sns_topic_arn] : []
-  ok_actions        = var.sns_topic_arn != "" ? [var.sns_topic_arn] : []
+  alarm_actions     = local.sns_topic_arns
+  ok_actions        = local.sns_topic_arns
 
   tags = {
     Name        = "${var.project_name}-composite-alarm"
