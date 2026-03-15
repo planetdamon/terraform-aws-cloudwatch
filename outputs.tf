@@ -23,9 +23,9 @@ output "alarm_arns" {
   value       = [for alarm in aws_cloudwatch_metric_alarm.application_alarms : alarm.arn]
 }
 
-output "sns_topic_arn" {
-  description = "Effective SNS topic ARN for CloudWatch notifications"
-  value       = var.sns_topic_arn
+output "sns_topic_arns" {
+  description = "SNS topic ARNs for CloudWatch notifications"
+  value       = local.sns_topic_arns
 }
 
 output "event_rule_names" {

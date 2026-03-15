@@ -131,10 +131,12 @@ variable "project_name" {
   type        = string
 }
 
-variable "sns_topic_arn" {
-  description = "SNS topic ARN for notifications"
-  type        = string
-  default     = ""
+variable "sns_topic_arns" {
+  description = "List of SNS topic ARN objects for notifications"
+  type = list(object({
+    arn = string
+  }))
+  default = []
 }
 
 variable "synthetics_bucket_name" {
