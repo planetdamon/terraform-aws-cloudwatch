@@ -1,14 +1,105 @@
+locals {
+  configured_log_groups = {
+    for log_group_name, log_group in var.log_groups_config : log_group_name => {
+      name           = log_group_name
+      retention_days = log_group.retention_days
+    }
+  }
+
+  legacy_log_groups = {
+    for log_group in var.log_groups : log_group.name => {
+      name           = log_group.name
+      retention_days = log_group.retention_days
+    }
+  }
+
+  effective_log_groups = length(var.log_groups_config) > 0 ? local.configured_log_groups : local.legacy_log_groups
+
+  configured_log_metric_filters = length(var.log_groups_config) > 0 ? merge([
+    for log_group_name, log_group in var.log_groups_config : {
+      for filter_name, metric_filter in log_group.metric_filters : "${log_group_name}:${filter_name}" => {
+        name             = filter_name
+        log_group_name   = log_group_name
+        pattern          = metric_filter.pattern
+        metric_name      = metric_filter.metric_name
+        metric_namespace = metric_filter.metric_namespace
+        metric_value     = metric_filter.metric_value
+      }
+    }
+  ]...) : {}
+
+  legacy_log_metric_filters = {
+    for index, metric_filter in var.log_metric_filters : tostring(index) => metric_filter
+  }
+
+  effective_log_metric_filters = length(local.configured_log_metric_filters) > 0 ? local.configured_log_metric_filters : local.legacy_log_metric_filters
+
+  configured_metric_alarms = length(var.log_groups_config) > 0 ? merge([
+    for log_group_name, log_group in var.log_groups_config : {
+      for alarm_name, alarm in log_group.alarms : "${log_group_name}:${alarm_name}" => {
+        name                = alarm_name
+        log_group_name      = log_group_name
+        comparison_operator = alarm.comparison_operator
+        evaluation_periods  = alarm.evaluation_periods
+        metric_name         = alarm.metric_name
+        namespace           = alarm.namespace
+        period              = alarm.period
+        statistic           = alarm.statistic
+        threshold           = alarm.threshold
+        description         = alarm.description
+        dimensions          = alarm.dimensions
+        sns_topic_arns      = alarm.sns_topic_arns
+      }
+    }
+  ]...) : {}
+
+  legacy_metric_alarms = {
+    for index, alarm in var.metric_alarms : tostring(index) => merge(alarm, {
+      sns_topic_arns = var.sns_topic_arn != "" ? [var.sns_topic_arn] : []
+    })
+  }
+
+  effective_metric_alarms = length(local.configured_metric_alarms) > 0 ? local.configured_metric_alarms : local.legacy_metric_alarms
+
+  effective_log_resource_policy = (
+    var.log_resource_policy != null ? {
+      name = var.log_resource_policy.name
+      policy_document = try(trim(var.log_resource_policy.policy_document), "") != "" ? var.log_resource_policy.policy_document : jsonencode({
+        Version = "2012-10-17"
+        Statement = [
+          for statement in var.log_resource_policy.statements : merge(
+            {
+              Effect   = statement.effect
+              Action   = statement.actions
+              Resource = statement.resources
+            },
+            try(statement.sid, null) != null ? { Sid = statement.sid } : {},
+            try(statement.principal, null) != null ? { Principal = statement.principal } : {},
+            try(statement.condition, null) != null ? { Condition = statement.condition } : {}
+          )
+        ]
+      })
+    } : null
+  )
+}
+
 # CloudWatch Log Groups
 resource "aws_cloudwatch_log_group" "application_logs" {
-  count             = length(var.log_groups)
-  name              = var.log_groups[count.index].name
-  retention_in_days = var.log_groups[count.index].retention_days
+  for_each          = local.effective_log_groups
+  name              = each.value.name
+  retention_in_days = each.value.retention_days
 
   tags = {
-    Name        = var.log_groups[count.index].name
+    Name        = each.value.name
     Environment = var.environment
     Application = var.project_name
   }
+}
+
+resource "aws_cloudwatch_log_resource_policy" "main" {
+  count = local.effective_log_resource_policy != null ? 1 : 0
+  policy_name     = local.effective_log_resource_policy.name
+  policy_document = local.effective_log_resource_policy.policy_document
 }
 
 # CloudWatch Dashboard
@@ -40,24 +131,24 @@ resource "aws_cloudwatch_dashboard" "main" {
 
 # CloudWatch Alarms for Application Metrics
 resource "aws_cloudwatch_metric_alarm" "application_alarms" {
-  count = length(var.metric_alarms)
+  for_each = local.effective_metric_alarms
 
-  alarm_name          = "${var.project_name}-${var.metric_alarms[count.index].name}"
-  comparison_operator = var.metric_alarms[count.index].comparison_operator
-  evaluation_periods  = var.metric_alarms[count.index].evaluation_periods
-  metric_name         = var.metric_alarms[count.index].metric_name
-  namespace           = var.metric_alarms[count.index].namespace
-  period              = var.metric_alarms[count.index].period
-  statistic           = var.metric_alarms[count.index].statistic
-  threshold           = var.metric_alarms[count.index].threshold
-  alarm_description   = var.metric_alarms[count.index].description
-  alarm_actions       = var.sns_topic_arn != "" ? [var.sns_topic_arn] : []
-  ok_actions          = var.sns_topic_arn != "" ? [var.sns_topic_arn] : []
+  alarm_name          = "${var.project_name}-${each.value.name}"
+  comparison_operator = each.value.comparison_operator
+  evaluation_periods  = each.value.evaluation_periods
+  metric_name         = each.value.metric_name
+  namespace           = each.value.namespace
+  period              = each.value.period
+  statistic           = each.value.statistic
+  threshold           = each.value.threshold
+  alarm_description   = each.value.description
+  alarm_actions       = each.value.sns_topic_arns
+  ok_actions          = each.value.sns_topic_arns
 
-  dimensions = var.metric_alarms[count.index].dimensions
+  dimensions = each.value.dimensions
 
   tags = {
-    Name        = "${var.project_name}-${var.metric_alarms[count.index].name}"
+    Name        = "${var.project_name}-${each.value.name}"
     Environment = var.environment
   }
 }
@@ -111,16 +202,16 @@ resource "aws_cloudwatch_event_target" "targets" {
 
 # CloudWatch Log Metric Filters
 resource "aws_cloudwatch_log_metric_filter" "filters" {
-  count = length(var.log_metric_filters)
+  for_each = local.effective_log_metric_filters
 
-  name           = "${var.project_name}-${var.log_metric_filters[count.index].name}"
-  log_group_name = var.log_metric_filters[count.index].log_group_name
-  pattern        = var.log_metric_filters[count.index].pattern
+  name           = "${var.project_name}-${each.value.name}"
+  log_group_name = each.value.log_group_name
+  pattern        = each.value.pattern
 
   metric_transformation {
-    name      = var.log_metric_filters[count.index].metric_name
-    namespace = var.log_metric_filters[count.index].metric_namespace
-    value     = var.log_metric_filters[count.index].metric_value
+    name      = each.value.metric_name
+    namespace = each.value.metric_namespace
+    value     = each.value.metric_value
   }
 }
 

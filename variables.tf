@@ -24,6 +24,116 @@ variable "log_groups" {
   default = []
 }
 
+# CloudWatch Log Groups Configuration
+variable "log_groups_config" {
+  description = "Map of log groups, each with one-to-many alarms; each alarm supports one-to-many SNS topic ARNs"
+  type = map(object({
+    retention_days = number
+    metric_filters = optional(map(object({
+      pattern          = string
+      metric_name      = string
+      metric_namespace = string
+      metric_value     = string
+    })), {})
+    alarms = map(object({
+      comparison_operator = string
+      evaluation_periods  = number
+      metric_name         = string
+      namespace           = string
+      period              = number
+      statistic           = string
+      threshold           = number
+      description         = string
+      dimensions          = optional(map(string), {})
+      sns_topic_arns      = list(string)
+    }))
+  }))
+  default = {}
+
+  validation {
+    condition = alltrue([
+      for _, log_cfg in var.log_groups_config :
+      length(log_cfg.alarms) > 0
+    ])
+    error_message = "Each log group in log_groups_config must define at least one alarm."
+  }
+
+  validation {
+    condition = alltrue(flatten([
+      for _, log_cfg in var.log_groups_config : [
+        for _, alarm_cfg in log_cfg.alarms :
+        length(alarm_cfg.sns_topic_arns) > 0
+      ]
+    ]))
+    error_message = "Each alarm in log_groups_config must define at least one SNS topic ARN."
+  }
+}
+
+variable "synthetics_schedule" {
+  description = "Schedule configuration for Synthetics canary"
+  type = object({
+    expression          = string
+    duration_in_seconds = number
+  })
+  default = null
+}
+variable "log_resource_policy" {
+  description = "Account-level CloudWatch Logs resource policy. Accepts either policy_document (raw JSON) or statements (structured). Only one allowed."
+  type = object({
+    name = string
+    policy_document = optional(string)
+    statements = optional(list(object({
+      sid       = optional(string)
+      effect    = string
+      actions   = list(string)
+      resources = list(string)
+      principal = optional(any)
+      condition = optional(any)
+    })), [])
+  })
+  default = null
+
+  validation {
+    condition = (
+      var.log_resource_policy == null ||
+      (
+        (
+          try(trim(var.log_resource_policy.policy_document), "") != "" &&
+          length(var.log_resource_policy.statements) == 0
+        ) ||
+        (
+          try(trim(var.log_resource_policy.policy_document), "") == "" &&
+          length(var.log_resource_policy.statements) > 0
+        )
+      )
+    )
+    error_message = "log_resource_policy must use only one source: either policy_document or statements, not both."
+  }
+
+  validation {
+    condition = (
+      var.log_resource_policy == null ||
+      (
+        try(trim(var.log_resource_policy.policy_document), "") != "" ||
+        length(var.log_resource_policy.statements) > 0
+      )
+    )
+    error_message = "log_resource_policy must provide either policy_document or at least one statement."
+  }
+
+  validation {
+    condition = (
+      var.log_resource_policy == null ||
+      alltrue([
+        for statement in var.log_resource_policy.statements :
+        length(statement.resources) > 0
+      ])
+    )
+    error_message = "Each policy statement in log_resource_policy must include at least one resource ARN."
+  }
+}
+
+
 variable "enable_dashboard" {
   description = "Whether to create CloudWatch dashboard"
   type        = bool
@@ -138,13 +248,4 @@ variable "website_url" {
   description = "Website URL to monitor with Synthetics"
   type        = string
   default     = ""
-}
-
-variable "synthetics_schedule" {
-  description = "Schedule configuration for Synthetics canary"
-  type = object({
-    expression          = string
-    duration_in_seconds = number
-  })
-  default = null
 }
