@@ -1,21 +1,12 @@
 locals {
-  configured_log_groups = {
+  log_groups = {
     for log_group_name, log_group in var.log_groups_config : log_group_name => {
       name           = log_group_name
       retention_days = log_group.retention_days
     }
   }
 
-  legacy_log_groups = {
-    for log_group in var.log_groups : log_group.name => {
-      name           = log_group.name
-      retention_days = log_group.retention_days
-    }
-  }
-
-  effective_log_groups = length(var.log_groups_config) > 0 ? local.configured_log_groups : local.legacy_log_groups
-
-  configured_log_metric_filters = length(var.log_groups_config) > 0 ? merge([
+  log_metric_filters = length(var.log_groups_config) > 0 ? merge([
     for log_group_name, log_group in var.log_groups_config : {
       for filter_name, metric_filter in log_group.metric_filters : "${log_group_name}:${filter_name}" => {
         name             = filter_name
@@ -28,13 +19,7 @@ locals {
     }
   ]...) : {}
 
-  legacy_log_metric_filters = {
-    for index, metric_filter in var.log_metric_filters : tostring(index) => metric_filter
-  }
-
-  effective_log_metric_filters = length(local.configured_log_metric_filters) > 0 ? local.configured_log_metric_filters : local.legacy_log_metric_filters
-
-  configured_metric_alarms = length(var.log_groups_config) > 0 ? merge([
+  metric_alarms = length(var.log_groups_config) > 0 ? merge([
     for log_group_name, log_group in var.log_groups_config : {
       for alarm_name, alarm in log_group.alarms : "${log_group_name}:${alarm_name}" => {
         name                = alarm_name
@@ -53,15 +38,7 @@ locals {
     }
   ]...) : {}
 
-  legacy_metric_alarms = {
-    for index, alarm in var.metric_alarms : tostring(index) => merge(alarm, {
-      sns_topic_arns = var.sns_topic_arn != "" ? [var.sns_topic_arn] : []
-    })
-  }
-
-  effective_metric_alarms = length(local.configured_metric_alarms) > 0 ? local.configured_metric_alarms : local.legacy_metric_alarms
-
-  effective_log_resource_policy = (
+  log_resource_policy = (
     var.log_resource_policy != null ? {
       name = var.log_resource_policy.name
       policy_document = try(trim(var.log_resource_policy.policy_document), "") != "" ? var.log_resource_policy.policy_document : jsonencode({
@@ -85,7 +62,7 @@ locals {
 
 # CloudWatch Log Groups
 resource "aws_cloudwatch_log_group" "application_logs" {
-  for_each          = local.effective_log_groups
+  for_each          = local.log_groups
   name              = each.value.name
   retention_in_days = each.value.retention_days
 
@@ -97,9 +74,9 @@ resource "aws_cloudwatch_log_group" "application_logs" {
 }
 
 resource "aws_cloudwatch_log_resource_policy" "main" {
-  count = local.effective_log_resource_policy != null ? 1 : 0
-  policy_name     = local.effective_log_resource_policy.name
-  policy_document = local.effective_log_resource_policy.policy_document
+  count           = local.log_resource_policy != null ? 1 : 0
+  policy_name     = local.log_resource_policy.name
+  policy_document = local.log_resource_policy.policy_document
 }
 
 # CloudWatch Dashboard
@@ -131,7 +108,7 @@ resource "aws_cloudwatch_dashboard" "main" {
 
 # CloudWatch Alarms for Application Metrics
 resource "aws_cloudwatch_metric_alarm" "application_alarms" {
-  for_each = local.effective_metric_alarms
+  for_each = local.metric_alarms
 
   alarm_name          = "${var.project_name}-${each.value.name}"
   comparison_operator = each.value.comparison_operator
@@ -202,7 +179,7 @@ resource "aws_cloudwatch_event_target" "targets" {
 
 # CloudWatch Log Metric Filters
 resource "aws_cloudwatch_log_metric_filter" "filters" {
-  for_each = local.effective_log_metric_filters
+  for_each = local.log_metric_filters
 
   name           = "${var.project_name}-${each.value.name}"
   log_group_name = each.value.log_group_name

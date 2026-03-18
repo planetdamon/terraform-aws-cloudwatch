@@ -15,15 +15,6 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
-variable "log_groups" {
-  description = "List of CloudWatch log groups to create"
-  type = list(object({
-    name           = string
-    retention_days = number
-  }))
-  default = []
-}
-
 # CloudWatch Log Groups Configuration
 variable "log_groups_config" {
   description = "Map of log groups, each with one-to-many alarms; each alarm supports one-to-many SNS topic ARNs"
@@ -80,7 +71,7 @@ variable "synthetics_schedule" {
 variable "log_resource_policy" {
   description = "Account-level CloudWatch Logs resource policy. Accepts either policy_document (raw JSON) or statements (structured). Only one allowed."
   type = object({
-    name = string
+    name            = string
     policy_document = optional(string)
     statements = optional(list(object({
       sid       = optional(string)
@@ -146,23 +137,6 @@ variable "dashboard_metrics" {
   default     = []
 }
 
-variable "metric_alarms" {
-  description = "List of CloudWatch metric alarms to create"
-  type = list(object({
-    name                = string
-    comparison_operator = string
-    evaluation_periods  = number
-    metric_name         = string
-    namespace           = string
-    period              = number
-    statistic           = string
-    threshold           = number
-    description         = string
-    dimensions          = map(string)
-  }))
-  default = []
-}
-
 variable "enable_composite_alarm" {
   description = "Whether to create composite alarm"
   type        = bool
@@ -193,19 +167,6 @@ variable "event_rules" {
       input_paths    = map(string)
       input_template = string
     })
-  }))
-  default = []
-}
-
-variable "log_metric_filters" {
-  description = "List of CloudWatch log metric filters"
-  type = list(object({
-    name             = string
-    log_group_name   = string
-    pattern          = string
-    metric_name      = string
-    metric_namespace = string
-    metric_value     = string
   }))
   default = []
 }

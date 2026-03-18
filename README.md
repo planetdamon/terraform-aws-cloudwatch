@@ -37,40 +37,36 @@ module "app_monitoring" {
 
   project_name = "my-web-app"
   environment  = "production"
-  
-  # Notification Configuration
-  notification_email = "alerts@company.com"
-  
-  # Log Groups
-  log_groups = [
-    {
-      name              = "/aws/lambda/api-function"
-      retention_in_days = 30
-    },
-    {
-      name              = "/aws/ecs/web-app"
-      retention_in_days = 14
-    }
-  ]
-  
-  # Basic Alarms
-  alarms = [
-    {
-      name               = "high-error-rate"
-      metric_name        = "ErrorRate"
-      namespace          = "AWS/ApplicationELB"
-      statistic          = "Average"
-      period             = 300
-      evaluation_periods = 2
-      threshold          = 5
-      comparison_operator = "GreaterThanThreshold"
-      alarm_description  = "Application error rate is too high"
-      
-      dimensions = {
-        LoadBalancer = "app/my-web-app-alb/1234567890"
+
+  log_groups_config = {
+    "/aws/lambda/api-function" = {
+      retention_days = 30
+
+      metric_filters = {
+        high_error_rate = {
+          pattern          = "ERROR"
+          metric_name      = "ErrorCount"
+          metric_namespace = "MyApp/Lambda"
+          metric_value     = "1"
+        }
+      }
+
+      alarms = {
+        high-error-rate = {
+          comparison_operator = "GreaterThanThreshold"
+          evaluation_periods  = 2
+          metric_name         = "ErrorCount"
+          namespace           = "MyApp/Lambda"
+          period              = 300
+          statistic           = "Sum"
+          threshold           = 5
+          description         = "Lambda error count is too high"
+          dimensions          = {}
+          sns_topic_arns      = [aws_sns_topic.alerts.arn]
+        }
       }
     }
-  ]
+  }
 }
 ```
 
@@ -81,115 +77,40 @@ module "infrastructure_monitoring" {
 
   project_name = "infrastructure"
   environment  = "production"
-  
-  # Multi-channel Notifications
-  notification_channels = {
-    critical = {
-      email = "critical@company.com"
-      slack_webhook = "https://hooks.slack.com/services/..."
-      pagerduty_endpoint = "https://events.pagerduty.com/..."
-    }
-    warning = {
-      email = "ops@company.com"
+
+  log_groups_config = {
+    "/aws/ecs/web-app" = {
+      retention_days = 14
+
+      metric_filters = {
+        error-count = {
+          pattern          = "ERROR"
+          metric_name      = "ErrorCount"
+          metric_namespace = "MyApp/ECS"
+          metric_value     = "1"
+        }
+      }
+
+      alarms = {
+        web-app-error-rate = {
+          comparison_operator = "GreaterThanThreshold"
+          evaluation_periods  = 2
+          metric_name         = "ErrorCount"
+          namespace           = "MyApp/ECS"
+          period              = 300
+          statistic           = "Sum"
+          threshold           = 10
+          description         = "ECS error count is too high"
+          dimensions          = {}
+          sns_topic_arns      = [aws_sns_topic.alerts.arn]
+        }
+      }
     }
   }
-  
-  # Custom Dashboard
-  dashboards = [
-    {
-      name = "Infrastructure-Overview"
-      body = jsonencode({
-        widgets = [
-          {
-            type   = "metric"
-            width  = 12
-            height = 6
-            properties = {
-              metrics = [
-                ["AWS/EC2", "CPUUtilization", "InstanceId", "i-1234567890abcdef0"],
-                ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "mydb-instance"],
-                ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", "app/my-alb/1234567890"]
-              ]
-              period = 300
-              stat   = "Average"
-              region = "us-east-1"
-              title  = "System Performance"
-            }
-          }
-        ]
-      })
-    }
-  ]
-  
-  # Advanced Alarms
-  alarms = [
-    # EC2 CPU Alarm
-    {
-      name                = "ec2-high-cpu"
-      metric_name         = "CPUUtilization"
-      namespace           = "AWS/EC2"
-      statistic           = "Average"
-      period              = 300
-      evaluation_periods  = 3
-      threshold           = 80
-      comparison_operator = "GreaterThanThreshold"
-      alarm_description   = "EC2 instance CPU utilization is high"
-      severity            = "warning"
-      
-      dimensions = {
-        InstanceId = "i-1234567890abcdef0"
-      }
-    },
-    
-    # RDS Connection Alarm
-    {
-      name                = "rds-connection-count"
-      metric_name         = "DatabaseConnections"
-      namespace           = "AWS/RDS"
-      statistic           = "Average"
-      period              = 300
-      evaluation_periods  = 2
-      threshold           = 80
-      comparison_operator = "GreaterThanThreshold"
-      alarm_description   = "RDS connection count is approaching limit"
-      severity            = "critical"
-      
-      dimensions = {
-        DBInstanceIdentifier = "mydb-instance"
-      }
-    },
-    
-    # Application Load Balancer Response Time
-    {
-      name                = "alb-response-time"
-      metric_name         = "TargetResponseTime"
-      namespace           = "AWS/ApplicationELB"
-      statistic           = "Average"
-      period              = 300
-      evaluation_periods  = 2
-      threshold           = 2
-      comparison_operator = "GreaterThanThreshold"
-      alarm_description   = "Application response time is too high"
-      severity            = "warning"
-      
-      dimensions = {
-        LoadBalancer = "app/my-alb/1234567890"
-      }
-    }
-  ]
-  
-  # Log Metric Filters
-  log_metric_filters = [
-    {
-      name           = "error-count"
-      log_group_name = "/aws/lambda/api-function"
-      filter_pattern = "ERROR"
-      metric_transformation = {
-        name      = "ErrorCount"
-        namespace = "MyApp/Lambda"
-        value     = "1"
-      }
-    }
+
+  enable_dashboard = true
+  dashboard_metrics = [
+    ["AWS/ECS", "CPUUtilization", "ClusterName", "production-cluster", "ServiceName", "web-app"]
   ]
 }
 ```
@@ -201,114 +122,33 @@ module "microservices_monitoring" {
 
   project_name = "microservices"
   environment  = "production"
-  
-  # Service-specific Log Groups
-  log_groups = [
-    {
-      name              = "/ecs/user-service"
-      retention_in_days = 30
-      kms_key_id        = aws_kms_key.logs.arn
-    },
-    {
-      name              = "/ecs/order-service"
-      retention_in_days = 30
-      kms_key_id        = aws_kms_key.logs.arn
-    },
-    {
-      name              = "/ecs/payment-service"
-      retention_in_days = 90  # Longer retention for financial data
-      kms_key_id        = aws_kms_key.logs.arn
-    }
-  ]
-  
-  # Composite Alarms for Service Health
-  composite_alarms = [
-    {
-      name                = "user-service-health"
-      alarm_description   = "Overall health of user service"
-      actions_enabled     = true
-      alarm_rule          = join(" OR ", [
-        "ALARM(user-service-high-error-rate)",
-        "ALARM(user-service-high-latency)",
-        "ALARM(user-service-low-healthy-hosts)"
-      ])
-    }
-  ]
-  
-  # Custom Metrics for Business KPIs
-  custom_metrics = [
-    {
-      namespace    = "MyApp/Business"
-      metric_name  = "SignupRate"
-      unit         = "Count/Second"
-      description  = "User signup rate"
-    },
-    {
-      namespace    = "MyApp/Business"
-      metric_name  = "RevenuePerMinute"
-      unit         = "None"
-      description  = "Revenue generated per minute"
-    }
-  ]
-  
-  # Anomaly Detection
-  anomaly_detectors = [
-    {
-      metric_name = "RequestCount"
-      namespace   = "AWS/ApplicationELB"
-      stat        = "Average"
-      dimensions = {
-        LoadBalancer = "app/api-gateway-alb/1234567890"
+
+  log_groups_config = {
+    "/ecs/user-service" = {
+      retention_days = 30
+      metric_filters = {}
+      alarms = {
+        user-service-errors = {
+          comparison_operator = "GreaterThanThreshold"
+          evaluation_periods  = 1
+          metric_name         = "5xxCount"
+          namespace           = "AWS/ApplicationELB"
+          period              = 300
+          statistic           = "Sum"
+          threshold           = 1
+          description         = "User service is returning 5xx responses"
+          dimensions = {
+            TargetGroup = "targetgroup/user-service/1234567890"
+          }
+          sns_topic_arns = [aws_sns_topic.alerts.arn]
+        }
       }
     }
-  ]
-}
-```
+  }
 
-### **Cost Monitoring and Optimization**
-```hcl
-module "cost_monitoring" {
-  source = "./terraform-aws-cloudwatch"
-
-  project_name = "cost-management"
-  environment  = "production"
-  
-  # Billing Alarms
-  billing_alarms = [
-    {
-      name                = "monthly-spend-warning"
-      threshold           = 1000
-      comparison_operator = "GreaterThanThreshold"
-      evaluation_periods  = 1
-      period              = 86400  # Daily
-      alarm_description   = "Monthly AWS spend approaching budget"
-    },
-    {
-      name                = "monthly-spend-critical"
-      threshold           = 1500
-      comparison_operator = "GreaterThanThreshold"
-      evaluation_periods  = 1
-      period              = 86400
-      alarm_description   = "Monthly AWS spend exceeded budget"
-      severity            = "critical"
-    }
-  ]
-  
-  # Resource Utilization Monitoring
-  resource_optimization_alarms = [
-    {
-      name                = "underutilized-ec2"
-      metric_name         = "CPUUtilization"
-      namespace           = "AWS/EC2"
-      statistic           = "Average"
-      period              = 3600   # 1 hour
-      evaluation_periods  = 24     # 24 hours
-      threshold           = 10     # Less than 10% CPU
-      comparison_operator = "LessThanThreshold"
-      alarm_description   = "EC2 instance is underutilized"
-      treat_missing_data  = "notBreaching"
-    }
-  ]
+  enable_composite_alarm = true
+  composite_alarm_rule   = "ALARM(microservices-user-service-errors)"
+  sns_topic_arn          = aws_sns_topic.alerts.arn
 }
 ```
 
@@ -330,22 +170,21 @@ module "cost_monitoring" {
 ### **Log Management**
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| `log_groups` | List of CloudWatch log groups | `list(object)` | `[]` |
-| `log_retention_days` | Default log retention period | `number` | `14` |
-| `enable_log_insights` | Enable CloudWatch Logs Insights | `bool` | `true` |
+| `log_groups_config` | Map of log groups with nested metric filters and alarms | `map(object)` | `{}` |
+| `log_resource_policy` | Optional CloudWatch Logs resource policy definition | `object` | `null` |
 
 ### **Alarms Configuration**
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| `alarms` | List of CloudWatch alarms | `list(object)` | `[]` |
-| `composite_alarms` | List of composite alarms | `list(object)` | `[]` |
-| `enable_anomaly_detection` | Enable anomaly detection | `bool` | `false` |
+| `enable_composite_alarm` | Whether to create a composite alarm | `bool` | `false` |
+| `composite_alarm_rule` | Alarm rule for the composite alarm | `string` | `""` |
+| `sns_topic_arn` | SNS topic ARN used by the composite alarm | `string` | `""` |
 
 ### **Dashboard Configuration**
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| `dashboards` | List of CloudWatch dashboards | `list(object)` | `[]` |
-| `create_default_dashboard` | Create default dashboard | `bool` | `true` |
+| `enable_dashboard` | Whether to create the default dashboard | `bool` | `false` |
+| `dashboard_metrics` | Metric definitions rendered in the dashboard widget | `list(list(string))` | `[]` |
 
 ## 📤 **Outputs**
 
