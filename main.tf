@@ -33,7 +33,8 @@ locals {
         threshold           = alarm.threshold
         description         = alarm.description
         dimensions          = alarm.dimensions
-        sns_topic_arns      = alarm.sns_topic_arns
+        alarm_sns_topic_arns = alarm.alarm_sns_topic_arns
+        ok_sns_topic_arns    = alarm.ok_sns_topic_arns
       }
     }
   ]...) : {}
@@ -119,8 +120,8 @@ resource "aws_cloudwatch_metric_alarm" "application_alarms" {
   statistic           = each.value.statistic
   threshold           = each.value.threshold
   alarm_description   = each.value.description
-  alarm_actions       = each.value.sns_topic_arns
-  ok_actions          = each.value.sns_topic_arns
+  alarm_actions       = each.value.alarm_sns_topic_arns
+  ok_actions          = each.value.ok_sns_topic_arns
 
   dimensions = each.value.dimensions
 
@@ -137,9 +138,8 @@ resource "aws_cloudwatch_composite_alarm" "main" {
   alarm_name        = "${var.project_name}-composite-alarm"
   alarm_description = "Composite alarm for ${var.project_name}"
   alarm_rule        = var.composite_alarm_rule
-  alarm_actions     = var.sns_topic_arns
-  ok_actions        = var.sns_topic_arns
-  // TODO: #4 separate SNS topics for alarm actions and OK actions
+  alarm_actions     = var.composite_alarm_sns_topic_arns
+  ok_actions        = var.composite_ok_sns_topic_arns
   tags = {
     Name        = "${var.project_name}-composite-alarm"
     Environment = var.environment

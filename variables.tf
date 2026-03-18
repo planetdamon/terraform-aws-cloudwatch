@@ -34,8 +34,9 @@ variable "log_groups_config" {
       statistic           = string
       threshold           = number
       description         = string
-      dimensions          = optional(map(string), {})
-      sns_topic_arns      = list(string)
+      dimensions              = optional(map(string), {})
+      alarm_sns_topic_arns    = list(string)
+      ok_sns_topic_arns       = optional(list(string), [])
     }))
   }))
   default = {}
@@ -52,10 +53,10 @@ variable "log_groups_config" {
     condition = alltrue(flatten([
       for _, log_cfg in var.log_groups_config : [
         for _, alarm_cfg in log_cfg.alarms :
-        length(alarm_cfg.sns_topic_arns) > 0
+        length(alarm_cfg.alarm_sns_topic_arns) > 0
       ]
     ]))
-    error_message = "Each alarm in log_groups_config must define at least one SNS topic ARN."
+    error_message = "Each alarm in log_groups_config must define at least one alarm SNS topic ARN in alarm_sns_topic_arns."
   }
 }
 
@@ -148,8 +149,14 @@ variable "composite_alarm_rule" {
   default     = ""
 }
 
-variable "sns_topic_arns" {
-  description = "SNS topic ARNs for composite alarm notifications"
+variable "composite_alarm_sns_topic_arns" {
+  description = "SNS topic ARNs to notify when the composite alarm transitions to ALARM state"
+  type        = list(string)
+  default     = []
+}
+
+variable "composite_ok_sns_topic_arns" {
+  description = "SNS topic ARNs to notify when the composite alarm transitions to OK state"
   type        = list(string)
   default     = []
 }

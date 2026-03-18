@@ -62,7 +62,8 @@ module "app_monitoring" {
           threshold           = 5
           description         = "Lambda error count is too high"
           dimensions          = {}
-          sns_topic_arns      = [aws_sns_topic.alerts.arn]
+          alarm_sns_topic_arns = [aws_sns_topic.alerts.arn]
+          ok_sns_topic_arns    = [aws_sns_topic.ok_alerts.arn]
         }
       }
     }
@@ -102,7 +103,8 @@ module "infrastructure_monitoring" {
           threshold           = 10
           description         = "ECS error count is too high"
           dimensions          = {}
-          sns_topic_arns      = [aws_sns_topic.alerts.arn]
+          alarm_sns_topic_arns = [aws_sns_topic.alerts.arn]
+          ok_sns_topic_arns    = [aws_sns_topic.ok_alerts.arn]
         }
       }
     }
@@ -140,15 +142,17 @@ module "microservices_monitoring" {
           dimensions = {
             TargetGroup = "targetgroup/user-service/1234567890"
           }
-          sns_topic_arns = [aws_sns_topic.alerts.arn]
+          alarm_sns_topic_arns = [aws_sns_topic.alerts.arn]
+          ok_sns_topic_arns    = [aws_sns_topic.ok_alerts.arn]
         }
       }
     }
   }
 
-  enable_composite_alarm = true
-  composite_alarm_rule   = "ALARM(microservices-user-service-errors)"
-  sns_topic_arns         = [aws_sns_topic.alerts.arn]
+  enable_composite_alarm         = true
+  composite_alarm_rule           = "ALARM(microservices-user-service-errors)"
+  composite_alarm_sns_topic_arns = [aws_sns_topic.alerts.arn]
+  composite_ok_sns_topic_arns    = [aws_sns_topic.ok_alerts.arn]
 }
 ```
 
@@ -170,7 +174,7 @@ module "microservices_monitoring" {
 ### **Log Management**
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| `log_groups_config` | Map of log groups with nested metric filters and alarms | `map(object)` | `{}` |
+| `log_groups_config` | Map of log groups with nested metric filters and alarms. Each alarm requires `alarm_sns_topic_arns` and optionally `ok_sns_topic_arns` | `map(object)` | `{}` |
 | `log_resource_policy` | Optional CloudWatch Logs resource policy definition | `object` | `null` |
 
 ### **Alarms Configuration**
@@ -178,7 +182,8 @@ module "microservices_monitoring" {
 |------|-------------|------|---------|
 | `enable_composite_alarm` | Whether to create a composite alarm | `bool` | `false` |
 | `composite_alarm_rule` | Alarm rule for the composite alarm | `string` | `""` |
-| `sns_topic_arns` | SNS topic ARNs used by the composite alarm | `list(string)` | `[]` |
+| `composite_alarm_sns_topic_arns` | SNS topic ARNs to notify when the composite alarm transitions to ALARM state | `list(string)` | `[]` |
+| `composite_ok_sns_topic_arns` | SNS topic ARNs to notify when the composite alarm transitions to OK state | `list(string)` | `[]` |
 
 ### **Dashboard Configuration**
 | Name | Description | Type | Default |
