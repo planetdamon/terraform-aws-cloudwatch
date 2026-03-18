@@ -148,7 +148,7 @@ module "microservices_monitoring" {
 
   enable_composite_alarm = true
   composite_alarm_rule   = "ALARM(microservices-user-service-errors)"
-  sns_topic_arn          = aws_sns_topic.alerts.arn
+  sns_topic_arns         = [aws_sns_topic.alerts.arn]
 }
 ```
 
@@ -178,7 +178,7 @@ module "microservices_monitoring" {
 |------|-------------|------|---------|
 | `enable_composite_alarm` | Whether to create a composite alarm | `bool` | `false` |
 | `composite_alarm_rule` | Alarm rule for the composite alarm | `string` | `""` |
-| `sns_topic_arn` | SNS topic ARN used by the composite alarm | `string` | `""` |
+| `sns_topic_arns` | SNS topic ARNs used by the composite alarm | `list(string)` | `[]` |
 
 ### **Dashboard Configuration**
 | Name | Description | Type | Default |

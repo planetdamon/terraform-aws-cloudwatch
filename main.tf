@@ -137,9 +137,9 @@ resource "aws_cloudwatch_composite_alarm" "main" {
   alarm_name        = "${var.project_name}-composite-alarm"
   alarm_description = "Composite alarm for ${var.project_name}"
   alarm_rule        = var.composite_alarm_rule
-  alarm_actions     = var.sns_topic_arn != "" ? [var.sns_topic_arn] : []
-  ok_actions        = var.sns_topic_arn != "" ? [var.sns_topic_arn] : []
-
+  alarm_actions     = var.sns_topic_arns
+  ok_actions        = var.sns_topic_arns
+  // TODO: allow separate SNS topics for OK actions
   tags = {
     Name        = "${var.project_name}-composite-alarm"
     Environment = var.environment

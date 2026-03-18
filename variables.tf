@@ -149,10 +149,10 @@ variable "composite_alarm_rule" {
   default     = ""
 }
 
-variable "sns_topic_arn" {
-  description = "SNS topic ARN for notifications"
-  type        = string
-  default     = ""
+variable "sns_topic_arns" {
+  description = "SNS topic ARNs for composite alarm notifications"
+  type        = list(string)
+  default     = []
 }
 
 variable "event_rules" {
