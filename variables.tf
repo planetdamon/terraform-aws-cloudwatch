@@ -15,7 +15,6 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
-# CloudWatch Log Groups Configuration
 variable "log_groups_config" {
   description = "Map of log groups, each with one-to-many alarms; each alarm supports one-to-many SNS topic ARNs"
   type = map(object({
@@ -69,6 +68,7 @@ variable "synthetics_schedule" {
   })
   default = null
 }
+
 variable "log_resource_policy" {
   description = "Account-level CloudWatch Logs resource policy. Accepts either policy_document (raw JSON) or statements (structured). Only one allowed."
   type = object({
@@ -124,7 +124,6 @@ variable "log_resource_policy" {
     error_message = "Each policy statement in log_resource_policy must include at least one resource ARN."
   }
 }
-
 
 variable "enable_dashboard" {
   description = "Whether to create CloudWatch dashboard"
