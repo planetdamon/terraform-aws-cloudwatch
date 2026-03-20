@@ -8,6 +8,11 @@ output "log_group_arns" {
   value       = [for lg in aws_cloudwatch_log_group.application_logs : lg.arn]
 }
 
+output "log_group_arns_map" {
+  description = "Map of log group names to their ARNs"
+  value = { for name, lg in aws_cloudwatch_log_group.application_logs : name => lg.arn }
+}
+
 output "dashboard_url" {
   description = "URL of the CloudWatch dashboard"
   value       = var.enable_dashboard ? "https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=${aws_cloudwatch_dashboard.main[0].dashboard_name}" : ""
