@@ -16,7 +16,7 @@ variable "aws_region" {
 }
 
 variable "log_groups_config" {
-  description = "Map of log groups, each with one-to-many alarms; each alarm supports one-to-many SNS topic ARNs"
+  description = "Map of log groups with metric filters; each metric filter can have alarms watching its published metrics"
   type = map(object({
     retention_days = number
     metric_filters = optional(map(object({
@@ -24,36 +24,27 @@ variable "log_groups_config" {
       metric_name      = string
       metric_namespace = string
       metric_value     = string
+      alarms = optional(map(object({
+        comparison_operator  = string
+        evaluation_periods   = number
+        period               = number
+        statistic            = string
+        threshold            = number
+        description          = string
+        alarm_sns_topic_arns = list(string)
+        ok_sns_topic_arns    = optional(list(string), [])
+      })), {})
     })), {})
-    alarms = map(object({
-      comparison_operator = string
-      evaluation_periods  = number
-      metric_name         = string
-      namespace           = string
-      period              = number
-      statistic           = string
-      threshold           = number
-      description         = string
-      dimensions              = optional(map(string), {})
-      alarm_sns_topic_arns    = list(string)
-      ok_sns_topic_arns       = optional(list(string), [])
-    }))
   }))
   default = {}
 
   validation {
-    condition = alltrue([
-      for _, log_cfg in var.log_groups_config :
-      length(log_cfg.alarms) > 0
-    ])
-    error_message = "Each log group in log_groups_config must define at least one alarm."
-  }
-
-  validation {
     condition = alltrue(flatten([
       for _, log_cfg in var.log_groups_config : [
-        for _, alarm_cfg in log_cfg.alarms :
-        length(alarm_cfg.alarm_sns_topic_arns) > 0
+        for _, filter_cfg in log_cfg.metric_filters : [
+          for _, alarm_cfg in filter_cfg.alarms :
+          length(alarm_cfg.alarm_sns_topic_arns) > 0
+        ]
       ]
     ]))
     error_message = "Each alarm in log_groups_config must define at least one alarm SNS topic ARN in alarm_sns_topic_arns."

@@ -20,23 +20,26 @@ locals {
   ]...) : {}
 
   metric_alarms = length(var.log_groups_config) > 0 ? merge([
-    for log_group_name, log_group in var.log_groups_config : {
-      for alarm_name, alarm in log_group.alarms : "${log_group_name}:${alarm_name}" => {
-        name                = alarm_name
-        log_group_name      = log_group_name
-        comparison_operator = alarm.comparison_operator
-        evaluation_periods  = alarm.evaluation_periods
-        metric_name         = alarm.metric_name
-        namespace           = alarm.namespace
-        period              = alarm.period
-        statistic           = alarm.statistic
-        threshold           = alarm.threshold
-        description         = alarm.description
-        dimensions          = alarm.dimensions
-        alarm_sns_topic_arns = alarm.alarm_sns_topic_arns
-        ok_sns_topic_arns    = alarm.ok_sns_topic_arns
+    for log_group_name, log_group in var.log_groups_config :
+    merge([
+      for filter_name, filter in log_group.metric_filters : {
+        for alarm_name, alarm in filter.alarms : "${log_group_name}:${filter_name}:${alarm_name}" => {
+          name                 = alarm_name
+          log_group_name       = log_group_name
+          filter_name          = filter_name
+          comparison_operator  = alarm.comparison_operator
+          evaluation_periods   = alarm.evaluation_periods
+          metric_name          = filter.metric_name
+          namespace            = filter.metric_namespace
+          period               = alarm.period
+          statistic            = alarm.statistic
+          threshold            = alarm.threshold
+          description          = alarm.description
+          alarm_sns_topic_arns = alarm.alarm_sns_topic_arns
+          ok_sns_topic_arns    = alarm.ok_sns_topic_arns
+        }
       }
-    }
+    ]...)
   ]...) : {}
 
   log_resource_policy = (
@@ -122,8 +125,6 @@ resource "aws_cloudwatch_metric_alarm" "application_alarms" {
   alarm_description   = each.value.description
   alarm_actions       = each.value.alarm_sns_topic_arns
   ok_actions          = each.value.ok_sns_topic_arns
-
-  dimensions = each.value.dimensions
 
   tags = {
     Name        = "${var.project_name}-${each.value.name}"

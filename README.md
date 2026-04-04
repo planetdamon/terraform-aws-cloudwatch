@@ -48,22 +48,19 @@ module "app_monitoring" {
           metric_name      = "ErrorCount"
           metric_namespace = "MyApp/Lambda"
           metric_value     = "1"
-        }
-      }
-
-      alarms = {
-        high-error-rate = {
-          comparison_operator = "GreaterThanThreshold"
-          evaluation_periods  = 2
-          metric_name         = "ErrorCount"
-          namespace           = "MyApp/Lambda"
-          period              = 300
-          statistic           = "Sum"
-          threshold           = 5
-          description         = "Lambda error count is too high"
-          dimensions          = {}
-          alarm_sns_topic_arns = [aws_sns_topic.alerts.arn]
-          ok_sns_topic_arns    = [aws_sns_topic.ok_alerts.arn]
+          
+          alarms = {
+            high-error-rate = {
+              comparison_operator  = "GreaterThanThreshold"
+              evaluation_periods   = 2
+              period               = 300
+              statistic            = "Sum"
+              threshold            = 5
+              description          = "Lambda error count is too high"
+              alarm_sns_topic_arns = [aws_sns_topic.alerts.arn]
+              ok_sns_topic_arns    = [aws_sns_topic.ok_alerts.arn]
+            }
+          }
         }
       }
     }
@@ -89,22 +86,19 @@ module "infrastructure_monitoring" {
           metric_name      = "ErrorCount"
           metric_namespace = "MyApp/ECS"
           metric_value     = "1"
-        }
-      }
-
-      alarms = {
-        web-app-error-rate = {
-          comparison_operator = "GreaterThanThreshold"
-          evaluation_periods  = 2
-          metric_name         = "ErrorCount"
-          namespace           = "MyApp/ECS"
-          period              = 300
-          statistic           = "Sum"
-          threshold           = 10
-          description         = "ECS error count is too high"
-          dimensions          = {}
-          alarm_sns_topic_arns = [aws_sns_topic.alerts.arn]
-          ok_sns_topic_arns    = [aws_sns_topic.ok_alerts.arn]
+          
+          alarms = {
+            web-app-error-rate = {
+              comparison_operator  = "GreaterThanThreshold"
+              evaluation_periods   = 2
+              period               = 300
+              statistic            = "Sum"
+              threshold            = 10
+              description          = "ECS error count is too high"
+              alarm_sns_topic_arns = [aws_sns_topic.alerts.arn]
+              ok_sns_topic_arns    = [aws_sns_topic.ok_alerts.arn]
+            }
+          }
         }
       }
     }
@@ -129,23 +123,6 @@ module "microservices_monitoring" {
     "/ecs/user-service" = {
       retention_days = 30
       metric_filters = {}
-      alarms = {
-        user-service-errors = {
-          comparison_operator = "GreaterThanThreshold"
-          evaluation_periods  = 1
-          metric_name         = "5xxCount"
-          namespace           = "AWS/ApplicationELB"
-          period              = 300
-          statistic           = "Sum"
-          threshold           = 1
-          description         = "User service is returning 5xx responses"
-          dimensions = {
-            TargetGroup = "targetgroup/user-service/1234567890"
-          }
-          alarm_sns_topic_arns = [aws_sns_topic.alerts.arn]
-          ok_sns_topic_arns    = [aws_sns_topic.ok_alerts.arn]
-        }
-      }
     }
   }
 
@@ -174,7 +151,7 @@ module "microservices_monitoring" {
 ### **Log Management**
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| `log_groups_config` | Map of log groups with nested metric filters and alarms. Each alarm requires `alarm_sns_topic_arns` and optionally `ok_sns_topic_arns` | `map(object)` | `{}` |
+| `log_groups_config` | Map of log groups with metric filters; each metric filter can have alarms watching its published metrics | `map(object)` | `{}` |
 | `log_resource_policy` | Optional CloudWatch Logs resource policy definition | `object` | `null` |
 
 ### **Alarms Configuration**

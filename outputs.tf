@@ -10,7 +10,7 @@ output "log_group_arns" {
 
 output "log_group_arns_map" {
   description = "Map of log group names to their ARNs"
-  value = { for name, lg in aws_cloudwatch_log_group.application_logs : name => lg.arn }
+  value       = { for name, lg in aws_cloudwatch_log_group.application_logs : name => lg.arn }
 }
 
 output "dashboard_url" {
