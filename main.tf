@@ -283,3 +283,71 @@ resource "aws_iam_role_policy_attachment" "synthetics_policy" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchSyntheticsExecutionRolePolicy"
   role       = aws_iam_role.synthetics_role[0].name
 }
+
+# ========================================
+# S3 Bucket Size Monitoring
+# ========================================
+
+# CloudWatch Metric Alarm for S3 Bucket Size
+# AWS publishes BucketSizeBytes metrics to CloudWatch daily
+
+//TODO: #6 paramaterize collection period
+resource "aws_cloudwatch_metric_alarm" "s3_bucket_size" {
+  for_each = var.s3_buckets_config
+
+  alarm_name          = "${var.project_name}-${each.key}-size-alarm"
+  alarm_description   = "Alert when ${each.value.bucket_name} exceeds ${each.value.threshold_gb}GB"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = each.value.evaluation_periods
+  metric_name         = "BucketSizeBytes"
+  namespace           = "AWS/S3"
+  period              = 86400 # 24 hours (S3 metrics are published daily)
+  statistic           = "Average"
+  threshold           = each.value.threshold_gb * 1024 * 1024 * 1024 # Convert GB to bytes
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    BucketName  = each.value.bucket_name
+    StorageType = each.value.storage_type
+  }
+
+  alarm_actions = each.value.alarm_sns_topic_arns
+  ok_actions    = each.value.ok_sns_topic_arns
+
+  tags = {
+    Name        = "${var.project_name}-${each.key}-size-alarm"
+    BucketName  = each.value.bucket_name
+    Environment = var.environment
+  }
+}
+
+# Optional: CloudWatch Metric Alarm for Number of Objects
+//TODO: #7 paramaterize collection period
+resource "aws_cloudwatch_metric_alarm" "s3_object_count" {
+  for_each = { for k, v in var.s3_buckets_config : k => v if v.enable_object_count_alarm }
+
+  alarm_name          = "${var.project_name}-${each.key}-object-count-alarm"
+  alarm_description   = "Alert when ${each.value.bucket_name} exceeds ${each.value.object_count_threshold} objects"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = each.value.evaluation_periods
+  metric_name         = "NumberOfObjects"
+  namespace           = "AWS/S3"
+  period              = 86400 # 24 hours
+  statistic           = "Average"
+  threshold           = each.value.object_count_threshold
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    BucketName  = each.value.bucket_name
+    StorageType = "AllStorageTypes"
+  }
+
+  alarm_actions = each.value.alarm_sns_topic_arns
+  ok_actions    = each.value.ok_sns_topic_arns
+
+  tags = {
+    Name        = "${var.project_name}-${each.key}-object-count-alarm"
+    BucketName  = each.value.bucket_name
+    Environment = var.environment
+  }
+}

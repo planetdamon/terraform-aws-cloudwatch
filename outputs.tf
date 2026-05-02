@@ -52,3 +52,37 @@ output "canary_arn" {
   description = "ARN of the Synthetics canary"
   value       = var.enable_synthetics_canary ? aws_synthetics_canary.website_monitor[0].arn : ""
 }
+
+# S3 Bucket Size Monitoring Outputs
+output "s3_bucket_size_alarm_arns" {
+  description = "Map of S3 bucket size alarm ARNs"
+  value = {
+    for k, alarm in aws_cloudwatch_metric_alarm.s3_bucket_size : k => alarm.arn
+  }
+}
+
+output "s3_bucket_size_alarm_names" {
+  description = "Map of S3 bucket size alarm names"
+  value = {
+    for k, alarm in aws_cloudwatch_metric_alarm.s3_bucket_size : k => alarm.alarm_name
+  }
+}
+
+output "s3_object_count_alarm_arns" {
+  description = "Map of S3 object count alarm ARNs"
+  value = {
+    for k, alarm in aws_cloudwatch_metric_alarm.s3_object_count : k => alarm.arn
+  }
+}
+
+output "s3_object_count_alarm_names" {
+  description = "Map of S3 object count alarm names"
+  value = {
+    for k, alarm in aws_cloudwatch_metric_alarm.s3_object_count : k => alarm.alarm_name
+  }
+}
+
+output "s3_monitored_buckets" {
+  description = "List of S3 bucket names being monitored"
+  value       = [for k, v in var.s3_buckets_config : v.bucket_name]
+}

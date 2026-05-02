@@ -27,6 +27,7 @@ This Terraform module creates a complete AWS CloudWatch monitoring infrastructur
 - 🎯 **Synthetics** - Synthetic monitoring
 - 📈 **Anomaly Detection** - Machine learning alerts
 - 🔄 **Auto Remediation** - Lambda-based responses
+- 💾 **S3 Bucket Monitoring** - Size and object count alarms
 
 ## 📋 **Usage**
 
@@ -133,6 +134,44 @@ module "microservices_monitoring" {
 }
 ```
 
+### **S3 Bucket Size Monitoring**
+```hcl
+module "s3_monitoring" {
+  source = "./terraform-aws-cloudwatch"
+
+  project_name = "infrastructure"
+  environment  = "production"
+
+  s3_buckets_config = {
+    cloudtrail = {
+      bucket_name          = "my-cloudtrail-bucket"
+      threshold_gb         = 200
+      storage_type         = "StandardStorage"
+      evaluation_periods   = 1
+      alarm_sns_topic_arns = [aws_sns_topic.s3_alerts.arn]
+      ok_sns_topic_arns    = [aws_sns_topic.ok_alerts.arn]
+    }
+    
+    data_lake = {
+      bucket_name               = "my-data-lake-bucket"
+      threshold_gb              = 1000
+      storage_type              = "StandardStorage"
+      evaluation_periods        = 2
+      alarm_sns_topic_arns      = [aws_sns_topic.s3_alerts.arn]
+      enable_object_count_alarm = true
+      object_count_threshold    = 5000000
+    }
+    
+    glacier_archive = {
+      bucket_name          = "my-glacier-bucket"
+      threshold_gb         = 5000
+      storage_type         = "GlacierStorage"
+      alarm_sns_topic_arns = [aws_sns_topic.s3_alerts.arn]
+    }
+  }
+}
+```
+
 ## 📝 **Input Variables**
 
 ### **Required Variables**
@@ -167,6 +206,33 @@ module "microservices_monitoring" {
 |------|-------------|------|---------|
 | `enable_dashboard` | Whether to create the default dashboard | `bool` | `false` |
 | `dashboard_metrics` | Metric definitions rendered in the dashboard widget | `list(list(string))` | `[]` |
+
+### **S3 Bucket Monitoring**
+| Name | Description | Type | Default |
+|------|-------------|------|---------|
+| `s3_buckets_config` | Map of S3 buckets to monitor with CloudWatch alarms | `map(object)` | `{}` |
+
+**S3 Bucket Config Object:**
+- `bucket_name` (string, required) - Name of the S3 bucket to monitor
+- `threshold_gb` (number, required) - Size threshold in GB
+- `storage_type` (string, optional) - S3 storage class to monitor (default: "StandardStorage")
+- `evaluation_periods` (number, optional) - Number of periods to evaluate (default: 1)
+- `alarm_sns_topic_arns` (list(string), required) - SNS topic ARNs for alarm notifications
+| `s3_bucket_size_alarm_arns` | Map of S3 bucket size alarm ARNs |
+| `s3_bucket_size_alarm_names` | Map of S3 bucket size alarm names |
+| `s3_object_count_alarm_arns` | Map of S3 object count alarm ARNs |
+| `s3_object_count_alarm_names` | Map of S3 object count alarm names |
+| `s3_monitored_buckets` | List of S3 bucket names being monitored |
+- `ok_sns_topic_arns` (list(string), optional) - SNS topic ARNs for OK notifications (default: [])
+- `enable_object_count_alarm` (bool, optional) - Enable object count monitoring (default: false)
+- `object_count_threshold` (number, optional) - Threshold for number of objects (default: 1000000)
+
+**Valid Storage Types:** StandardStorage, StandardIAStorage, OneZoneIAStorage, IntelligentTieringFAStorage, IntelligentTieringIAStorage, GlacierInstantRetrievalStorage, GlacierStorage, DeepArchiveStorage, ReducedRedundancyStorage
+
+**Important Notes:**
+- S3 metrics are published to CloudWatch **once per day** (not real-time)
+- First metrics may take 24-48 hours after bucket creation
+- Bucket must contain at least one object for metrics to be published
 
 ## 📤 **Outputs**
 

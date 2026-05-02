@@ -207,3 +207,50 @@ variable "website_url" {
   type        = string
   default     = ""
 }
+
+//TODO: #5 paramaterize object count alarm threshold
+variable "s3_buckets_config" {
+  description = "Map of S3 buckets to monitor with CloudWatch alarms"
+  type = map(object({
+    bucket_name              = string
+    threshold_gb             = number
+    storage_type             = optional(string, "StandardStorage")
+    evaluation_periods       = optional(number, 1)
+    alarm_sns_topic_arns     = list(string)
+    ok_sns_topic_arns        = optional(list(string), [])
+    enable_object_count_alarm = optional(bool, false)
+    object_count_threshold   = optional(number, 1000000)
+  }))
+  default = {}
+
+  validation {
+    condition = alltrue([
+      for k, v in var.s3_buckets_config : v.threshold_gb > 0
+    ])
+    error_message = "S3 bucket size threshold must be greater than 0 GB."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.s3_buckets_config : length(v.alarm_sns_topic_arns) > 0
+    ])
+    error_message = "Each S3 bucket alarm must have at least one SNS topic ARN for notifications."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.s3_buckets_config : contains([
+        "StandardStorage",
+        "IntelligentTieringFAStorage",
+        "IntelligentTieringIAStorage",
+        "StandardIAStorage",
+        "OneZoneIAStorage",
+        "ReducedRedundancyStorage",
+        "GlacierInstantRetrievalStorage",
+        "GlacierStorage",
+        "DeepArchiveStorage"
+      ], v.storage_type)
+    ])
+    error_message = "Storage type must be one of the valid S3 storage classes."
+  }
+}
