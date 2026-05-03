@@ -6,13 +6,11 @@ variable "project_name" {
 variable "environment" {
   description = "Environment name"
   type        = string
-  default     = "dev"
 }
 
 variable "aws_region" {
   description = "AWS region"
   type        = string
-  default     = "us-east-1"
 }
 
 variable "log_groups_config" {
@@ -119,7 +117,6 @@ variable "log_resource_policy" {
 variable "enable_dashboard" {
   description = "Whether to create CloudWatch dashboard"
   type        = bool
-  default     = false
 }
 
 variable "dashboard_metrics" {
@@ -131,7 +128,6 @@ variable "dashboard_metrics" {
 variable "enable_composite_alarm" {
   description = "Whether to create composite alarm"
   type        = bool
-  default     = false
 }
 
 variable "composite_alarm_rule" {
@@ -181,7 +177,6 @@ variable "insights_queries" {
 variable "create_sns_topic" {
   description = "Whether to create SNS topic for CloudWatch notifications"
   type        = bool
-  default     = false
 }
 
 variable "notification_emails" {
@@ -193,7 +188,6 @@ variable "notification_emails" {
 variable "enable_synthetics_canary" {
   description = "Whether to enable CloudWatch Synthetics canary"
   type        = bool
-  default     = false
 }
 
 variable "synthetics_bucket_name" {
