@@ -208,7 +208,6 @@ variable "website_url" {
   default     = ""
 }
 
-//TODO: #5 paramaterize object count alarm threshold
 variable "s3_buckets_config" {
   description = "Map of S3 buckets to monitor with CloudWatch alarms"
   type = map(object({

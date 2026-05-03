@@ -291,7 +291,6 @@ resource "aws_iam_role_policy_attachment" "synthetics_policy" {
 # CloudWatch Metric Alarm for S3 Bucket Size
 # AWS publishes BucketSizeBytes metrics to CloudWatch daily
 
-//TODO: #6 paramaterize collection period
 resource "aws_cloudwatch_metric_alarm" "s3_bucket_size" {
   for_each = var.s3_buckets_config
 
@@ -322,7 +321,6 @@ resource "aws_cloudwatch_metric_alarm" "s3_bucket_size" {
 }
 
 # Optional: CloudWatch Metric Alarm for Number of Objects
-//TODO: #7 paramaterize collection period
 resource "aws_cloudwatch_metric_alarm" "s3_object_count" {
   for_each = { for k, v in var.s3_buckets_config : k => v if v.enable_object_count_alarm }
 
@@ -332,7 +330,7 @@ resource "aws_cloudwatch_metric_alarm" "s3_object_count" {
   evaluation_periods  = each.value.evaluation_periods
   metric_name         = "NumberOfObjects"
   namespace           = "AWS/S3"
-  period              = 86400 # 24 hours
+  period              = 86400 # 24 hours (S3 metrics are published daily)
   statistic           = "Average"
   threshold           = each.value.object_count_threshold
   treat_missing_data  = "notBreaching"
